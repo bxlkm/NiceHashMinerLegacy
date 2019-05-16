@@ -60,7 +60,7 @@ namespace NiceHashMiner.Plugin
             new TRexIntegratedPlugin(),
             new TTMinerIntegratedPlugin(),
             //new NanoMinerIntegratedPlugin(),
-
+            new CorruptedIntegratedPlugin(),
             // service plugin
             EthlargementIntegratedPlugin.Instance
         };
