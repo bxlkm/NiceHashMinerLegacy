@@ -37,22 +37,35 @@ namespace CorruptedPlugin
 
         public Dictionary<BaseDevice, IReadOnlyList<Algorithm>> GetSupportedAlgorithms(IEnumerable<BaseDevice> devices)
         {
-            var cudaGpus = devices.Where(dev => dev is CUDADevice cuda && cuda.SM_major >= 3).Cast<CUDADevice>();
             var supported = new Dictionary<BaseDevice, IReadOnlyList<Algorithm>>();
 
-            foreach (var gpu in cudaGpus)
+            // CUDA 9.2+ driver 397.44
+            var mininumRequiredDriver = new Version(397, 44);
+            if (CUDADevice.INSTALLED_NVIDIA_DRIVERS >= mininumRequiredDriver)
             {
-                var algos = GetSupportedAlgorithms(gpu).ToList();
-                if (algos.Count > 0) supported.Add(gpu, algos);
+                var cudaGpus = devices.Where(dev => dev is CUDADevice cuda && cuda.SM_major >= 5).Cast<CUDADevice>();
+                foreach (var gpu in cudaGpus)
+                {
+                    var algos = GetCUDASupportedAlgorithms(gpu).ToList();
+                    if (algos.Count > 0) supported.Add(gpu, algos);
+                }
             }
 
             return supported;
         }
 
-        private IEnumerable<Algorithm> GetSupportedAlgorithms(CUDADevice dev)
+        IReadOnlyList<Algorithm> GetCUDASupportedAlgorithms(CUDADevice gpu)
         {
-            yield return new Algorithm(PluginUUID, AlgorithmType.Skunk);
-            yield return new Algorithm(PluginUUID, AlgorithmType.X16R);
+            var algorithms = new List<Algorithm>
+            {
+                new Algorithm(PluginUUID, AlgorithmType.ZHash) {Enabled = false },
+                new Algorithm(PluginUUID, AlgorithmType.DaggerHashimoto) {Enabled = false },
+                new Algorithm(PluginUUID, AlgorithmType.Beam) {Enabled = false },
+                new Algorithm(PluginUUID, AlgorithmType.GrinCuckaroo29),
+                new Algorithm(PluginUUID, AlgorithmType.GrinCuckatoo31),
+            };
+            var filteredAlgorithms = Filters.FilterInsufficientRamAlgorithmsList(gpu.GpuRam, algorithms);
+            return filteredAlgorithms;
         }
 
         public IMiner CreateMiner()
@@ -95,49 +108,6 @@ namespace CorruptedPlugin
                     ShortName = "-i",
                     LongName = "--intensity",
                     DefaultValue = "auto"
-                },
-                /// <summary>
-                /// Set process priority (default: 2) 0 idle, 2 normal to 5 highest.
-                /// </summary>
-                new MinerOption
-                {
-                    Type = MinerOptionType.OptionWithSingleParameter,
-                    ID = "trex_priority",
-                    ShortName = "--cpu-priority",
-                    DefaultValue = "2"
-                },
-                /// <summary>
-                /// Forces miner to immediately reconnect to pool on N successively failed shares (default: 10).
-                /// </summary>
-                new MinerOption
-                {
-                    Type = MinerOptionType.OptionWithSingleParameter,
-                    ID = "trex_reconectFailed",
-                    ShortName = "--reconnect-on-fail-shares",
-                    DefaultValue = "10"
-                }
-            },
-            TemperatureOptions = new List<MinerOption>
-            {
-                /// <summary>
-                /// GPU shutdown temperature. (default: 0 - disabled)
-                /// </summary>
-                new MinerOption
-                {
-                    Type = MinerOptionType.OptionWithSingleParameter,
-                    ID = "trex_tempLimit",
-                    LongName = "--temperature-limit",
-                    DefaultValue = "0"
-                },
-                /// <summary>
-                /// GPU temperature to enable card after disable. (default: 0 - disabled)
-                /// </summary>
-                new MinerOption
-                {
-                    Type = MinerOptionType.OptionWithSingleParameter,
-                    ID = "trex_tempStart",
-                    LongName = "--temperature-start",
-                    DefaultValue = "0"
                 }
             }
         };
@@ -150,7 +120,7 @@ namespace CorruptedPlugin
             var miner = CreateMiner() as IBinAndCwdPathsGettter;
             if (miner == null) return Enumerable.Empty<string>();
             var pluginRootBinsPath = miner.GetBinAndCwdPaths().Item2;
-            return BinaryPackageMissingFilesCheckerHelpers.ReturnMissingFiles(pluginRootBinsPath, new List<string> {"t-rex.exe" });
+            return BinaryPackageMissingFilesCheckerHelpers.ReturnMissingFiles(pluginRootBinsPath, new List<string> { "bminer.exe" });
         }
 
         public bool ShouldReBenchmarkAlgorithmOnDevice(BaseDevice device, Version benchmarkedPluginVersion, params AlgorithmType[] ids)
