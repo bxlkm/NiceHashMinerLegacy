@@ -31,7 +31,7 @@ namespace CorruptedPlugin
 
         public Version Version => new Version(1, 1);
 
-        public string Name => "TRex";
+        public string Name => "Corrupted";
 
         public string Author => "domen.kirnkrefl@nicehash.com";
 
@@ -150,7 +150,7 @@ namespace CorruptedPlugin
             var miner = CreateMiner() as IBinAndCwdPathsGettter;
             if (miner == null) return Enumerable.Empty<string>();
             var pluginRootBinsPath = miner.GetBinAndCwdPaths().Item2;
-            return BinaryPackageMissingFilesCheckerHelpers.ReturnMissingFiles(pluginRootBinsPath, new List<string> { "msvcr71.dll", "t-rex.exe" });
+            return BinaryPackageMissingFilesCheckerHelpers.ReturnMissingFiles(pluginRootBinsPath, new List<string> {"t-rex.exe" });
         }
 
         public bool ShouldReBenchmarkAlgorithmOnDevice(BaseDevice device, Version benchmarkedPluginVersion, params AlgorithmType[] ids)
